@@ -37,7 +37,7 @@ if gerar:
     else:
         try:
             # Configura a IA
-            genai.configure(api_key=api_key)
+          model = genai.GenerativeModel('gemini-pro')
             model = genai.GenerativeModel('gemini-1.5-flash') # Modelo rápido e barato
 
             # O PROMPT DE COMANDO (A ordem que garante o resultado)
