@@ -7,20 +7,16 @@ import graphviz as graphviz_lib
 # ==========================================
 # 🔐 ÁREA DE SEGURANÇA
 # ==========================================
-# Cole sua API Key dentro das aspas abaixo:
-API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q" 
+API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q"  # <--- COLE SUA CHAVE AQUI
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
 
-# CSS para visualização na tela (Simulação A4)
 st.markdown("""
     <style>
     .main { background-color: #555; }
     .stApp { background-color: #555; }
-    
-    /* Folha A4 na tela */
     .a4-preview {
         background-color: white;
         width: 210mm;
@@ -32,29 +28,24 @@ st.markdown("""
         justify-content: center;
         align-items: center;
     }
-    
     h1, h2, h3 { color: white !important; }
     .stTextInput > label, .stTextArea > label { color: white !important; }
     .stMarkdown p { color: #eee !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BARRA LATERAL (INPUTS) ---
 with st.sidebar:
     st.header("📝 Dados do Documento")
     empresa = st.text_input("Empresa:", value="SUA EMPRESA ENGENHARIA")
     cliente = st.text_input("Cliente:", value="Cliente Final Ltda")
     titulo_doc = st.text_input("Título do Fluxo:", value="Procedimento Operacional Padrão")
     data_rev = st.text_input("Data/Revisão:", value="Fev/2026 - Rev.01")
-    
     st.markdown("---")
     st.header("🎨 Layout")
     orientacao = st.radio("Orientação:", ["Retrato (Vertical)", "Paisagem (Horizontal)"])
-    
     st.markdown("---")
     st.info("Sistema rodando com Gemini 2.5 Flash")
 
-# --- ÁREA PRINCIPAL ---
 st.title("🖨️ Gerador de Fluxogramas A4 (PDF Engine)")
 
 col_input, col_preview = st.columns([1, 2])
@@ -68,27 +59,21 @@ Se sim, aprovar cadastro.
 Se não, solicitar revisão.
 Fim."""
     descricao = st.text_area("Descreva as etapas:", value=texto_padrao, height=300)
-    
     gerar = st.button("Gerar Documento PDF", type="primary", use_container_width=True)
-    
     st.warning("Nota: O PDF gerado já incluirá o cabeçalho e as margens corretas para impressão.")
 
 with col_preview:
     if gerar:
-        # Verifica se a chave foi colocada no código
         if not API_KEY_FIXA:
-            st.error("❌ ERRO: Você esqueceu de colocar a API Key na linha 11 do código!")
+            st.error("❌ ERRO: Você esqueceu de colocar a API Key na linha 10 do código!")
         else:
-            # Configuração A4 baseada na orientação
             if "Retrato" in orientacao:
                 rankdir = "TB"
-                # A4 em polegadas com margem de segurança
                 size_attr = 'size="8.27,11.69!"'
             else:
                 rankdir = "LR"
                 size_attr = 'size="11.69,8.27!"'
 
-            # Prompt Avançado: Injeta o cabeçalho HTML dentro do Graphviz
             prompt = f"""
             Crie um código Graphviz (DOT) para este processo: "{descricao}"
             
@@ -122,9 +107,7 @@ with col_preview:
                - Início/Fim: shape=ellipse, fillcolor="#444444", fontcolor="white".
                - Decisão: shape=diamond, fillcolor="#FFF9C4".
             
-            5. Retorne APENAS o código DOT dentro de
-```dot ...
-```.
+            5. Retorne APENAS o código DOT. Não use markdown.
             """
 
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY_FIXA}"
@@ -136,50 +119,48 @@ with col_preview:
                     if response.status_code == 200:
                         texto = response.json()['candidates'][0]['content']['parts'][0]['text']
                         
-                        # --- CORREÇÃO BLINDADA ---
-                        # Usando aspas triplas para TUDO que envolve crases
-                        padrao = r"""
-```(?:dot)?\s*(.*?)
-```"""
-                        match = re.search(padrao, texto, re.DOTALL)
+                        # --- LIMPEZA CIRÚRGICA (CORREÇÃO DO ERRO) ---
+                        # 1. Encontra onde começa o código real (digraph)
+                        inicio = texto.find("digraph")
                         
-                        codigo_dot = ""
-                        
-                        if match:
-                            codigo_dot = match.group(1)
-                        else:
-                            # Limpeza manual segura com aspas triplas
-                            codigo_dot = texto.replace("""
-```dot""", "")
-                            codigo_dot = codigo_dot.replace("""
-```""", "")
-                            codigo_dot = codigo_dot.strip()
-                        
-                        # 1. Visualização na Tela (SVG)
-                        st.markdown('<div class="a4-preview">', unsafe_allow_html=True)
-                        st.graphviz_chart(codigo_dot, use_container_width=True)
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        # 2. Geração do PDF Real (Backend)
-                        try:
-                            src = graphviz_lib.Source(codigo_dot)
-                            pdf_bytes = src.pipe(format='pdf')
+                        if inicio != -1:
+                            # Pega tudo a partir de 'digraph'
+                            codigo_limpo = texto[inicio:]
+                            # Remove as crases finais se existirem
+                            codigo_limpo = codigo_limpo.replace("
+```", "").strip()
                             
-                            st.success("✅ Documento pronto!")
-                            st.download_button(
-                                label="⬇️ BAIXAR PDF (A4 FINAL)",
-                                data=pdf_bytes,
-                                file_name="Fluxograma_A4.pdf",
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
-                        except Exception as e:
-                            st.error("Erro na conversão PDF. Verifique se o Graphviz está instalado no sistema.")
-                            st.code(str(e))
+                            # 1. Visualização na Tela
+                            st.markdown('<div class="a4-preview">', unsafe_allow_html=True)
+                            st.graphviz_chart(codigo_limpo, use_container_width=True)
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            
+                            # 2. Geração do PDF
+                            try:
+                                src = graphviz_lib.Source(codigo_limpo)
+                                pdf_bytes = src.pipe(format='pdf')
+                                
+                                st.success("✅ Documento pronto!")
+                                st.download_button(
+                                    label="⬇️ BAIXAR PDF (A4 FINAL)",
+                                    data=pdf_bytes,
+                                    file_name="Fluxograma_A4.pdf",
+                                    mime="application/pdf",
+                                    use_container_width=True
+                                )
+                            except Exception as e:
+                                st.error("Erro na conversão PDF.")
+                                st.code(str(e))
+                                # Mostra o código que tentou ser renderizado para debug
+                                with st.expander("Ver código problemático"):
+                                    st.code(codigo_limpo)
+                        else:
+                            st.error("Não encontrei um código 'digraph' válido na resposta.")
+                            st.write(texto)
                             
                     else:
                         st.error(f"Erro API: {response.status_code}")
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.caption("Sistema de Engenharia de Processos v6.2")
+st.caption("Sistema de Engenharia de Processos v6.3")
