@@ -8,7 +8,7 @@ import graphviz as graphviz_lib
 # 🔐 ÁREA DE SEGURANÇA
 # ==========================================
 # Cole sua API Key dentro das aspas abaixo:
-API_KEY_FIXA = "" 
+API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q" 
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
