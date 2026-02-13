@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import json
 import re
-import graphviz as graphviz_lib  # Necessário: pip install graphviz
+import graphviz as graphviz_lib
 
 # --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Fluxograma Pro A4", layout="wide")
@@ -36,7 +36,6 @@ Da pesagem vai para o reator de mistura."""
     gerar = st.button("Gerar Fluxograma", type="primary")
 
 # --- EXECUÇÃO TÁTICA ---
-# --- EXECUÇÃO TÁTICA ---
 if gerar:
     if not api_key:
         st.error("Preciso da chave API para operar, Angelo.")
@@ -46,17 +45,23 @@ if gerar:
         
         # Define orientação para o Graphviz
         rankdir = "TB" if "Retrato" in orientacao else "LR"
+        
         # Dimensões A4 em polegadas (aprox)
-        size_attr = 'size="8.27,11.69!"' if "Retrato" in orientacao else 'size="11.69,8.27!"'
+        # O '!' força o gráfico a ocupar esse espaço exato
+        if "Retrato" in orientacao:
+            size_attr = 'size="8.27,11.69!"'
+        else:
+            size_attr = 'size="11.69,8.27!"'
 
         headers = {'Content-Type': 'application/json'}
         
+        # Prompt Refinado para Engenharia/Processos
         prompt = f"""
         Aja como um Engenheiro de Processos Sênior. Crie um código Graphviz (DOT) para o seguinte processo:
         "{descricao}"
         
         REGRAS RÍGIDAS DE LAYOUT (A4):
-        1. O código DEVE começar com: digraph G {{ graph [fontname="Helvetica", fontsize=12, splines=ortho, nodesep=0.6, ranksep=0.8, {size_attr}, ratio="fill", margin=0.5]; node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5]; edge [fontname="Helvetica", fontsize=10]; rankdir={rankdir};
+        1. O código DEVE começar EXATAMENTE com: digraph G {{ graph [fontname="Helvetica", fontsize=12, splines=ortho, nodesep=0.6, ranksep=0.8, {size_attr}, ratio="fill", margin=0.5]; node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5]; edge [fontname="Helvetica", fontsize=10]; rankdir={rankdir};
         
         REGRAS DE ESTILO:
         2. Início/Fim: shape=ellipse, style="filled", fillcolor="#424242", fontcolor="white".
@@ -86,7 +91,8 @@ if gerar:
                     try:
                         texto = resultado['candidates'][0]['content']['parts'][0]['text']
                         
-                        # --- CORREÇÃO APLICADA AQUI ---
+                        # A CORREÇÃO PRINCIPAL ESTÁ AQUI:
+                        # Usando aspas duplas e garantindo que está tudo na mesma linha
                         match = re.search(r"
 ```(?:dot)?\s*(.*?)
 ```", texto, re.DOTALL)
@@ -98,6 +104,7 @@ if gerar:
                                 st.subheader("Visualização (Preview)")
                                 st.graphviz_chart(codigo_dot)
                                 
+                                # Lógica de PDF
                                 try:
                                     src = graphviz_lib.Source(codigo_dot)
                                     pdf_data = src.pipe(format='pdf')
@@ -111,18 +118,22 @@ if gerar:
                                         mime="application/pdf"
                                     )
                                 except Exception as e_graph:
-                                    st.warning(f"Visualização gerada, mas erro ao criar PDF: {e_graph}")
-                                    st.info("Dica: Instale o Graphviz no sistema (apt-get install graphviz).")
+                                    st.warning("Visualização gerada, mas erro ao criar PDF.")
+                                    st.error(f"Erro técnico: {e_graph}")
+                                    st.info("Dica: Verifique se o software 'Graphviz' está instalado no sistema operacional (não apenas o pip install).")
                                     
                                 with st.expander("Ver Código DOT"):
                                     st.code(codigo_dot)
                         else:
-                            st.warning("O modelo não retornou o código formatado corretamente.")
-                            st.write(texto) # Mostra o texto cru para debug
+                            st.warning("O modelo respondeu, mas não formatou o código corretamente.")
+                            st.write(texto)
                     except Exception as e:
-                        st.error(f"Erro ao processar dados: {e}")
+                        st.error(f"Erro ao interpretar resposta: {e}")
                 else:
-                    st.error(f"Erro na API: {response.status_code}")
+                    st.error(f"Erro na API ({response.status_code}): {response.text}")
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
+
+st.markdown("---")
+st.caption("Ferramenta de Processos - A4 Edition")
