@@ -90,11 +90,11 @@ if gerar:
                     try:
                         texto = resultado['candidates'][0]['content']['parts'][0]['text']
                         
-                        # --- CORREÇÃO DEFINITIVA ---
-                        # Definimos o padrão regex em uma variável separada para evitar quebras de linha
-                        padrao_regex = r"
+                        # --- CORREÇÃO BLINDADA ---
+                        # Usando aspas triplas para evitar erro de quebra de linha
+                        padrao_regex = r"""
 ```(?:dot)?\s*(.*?)
-```"
+```"""
                         
                         match = re.search(padrao_regex, texto, re.DOTALL)
                         
