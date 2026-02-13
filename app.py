@@ -2,95 +2,37 @@ import streamlit as st
 import requests
 import json
 import re
+import graphviz as graphviz_lib # Necessário: pip install graphviz
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Gerador de Fluxograma Industrial", layout="wide")
+st.set_page_config(page_title="Gerador de Fluxograma Pro", layout="wide")
 
-# Estilo CSS para simular A4 e formatar impressão
+# Estilo CSS personalizado para melhorar a aparência e simular A4 na tela
 st.markdown("""
     <style>
-    /* Esconde elementos do Streamlit na impressão */
-    @media print {
-        div[data-testid="stSidebar"], 
-        div[data-testid="stHeader"], 
-        .stButton, 
-        footer,
-        header {
-            display: none !important;
-        }
-        .main .block-container {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        .a4-page {
-            margin: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            width: 100% !important;
-        }
-    }
-    
     .main {
         background-color: #f0f2f6;
     }
-    
-    /* Container que simula folha A4 na tela */
-    .a4-page {
-        background-color: white;
-        width: 210mm;
-        min-height: 297mm;
-        padding: 15mm;
-        margin: 20px auto;
-        box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        display: flex;
-        flex-direction: column;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        border: 1px solid #ddd;
-    }
-    
-    .header-table {
+    .stButton>button {
         width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        border: 2px solid #2c3e50;
-    }
-    
-    .header-table td {
-        border: 1px solid #2c3e50;
-        padding: 12px;
-    }
-    
-    .header-title {
-        font-size: 20pt;
+        border-radius: 8px;
+        height: 3em;
         font-weight: bold;
-        text-align: center;
-        background-color: #ecf0f1;
-        color: #2c3e50;
-        text-transform: uppercase;
     }
-    
-    .info-label {
-        font-weight: bold;
-        font-size: 9pt;
-        color: #7f8c8d;
-        text-transform: uppercase;
-        display: block;
-        margin-bottom: 2px;
-    }
-    
-    .info-value {
-        font-size: 12pt;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-    
-    .chart-container {
-        flex-grow: 1;
+    /* Estilo para o container do gráfico para parecer uma folha A4 */
+    .a4-container {
+        background-color: white;
+        padding: 1cm; /* Margem visual */
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        margin: auto;
+        border: 1px solid #ddd;
+        /* Proporção A4 visual */
+        aspect-ratio: 210/297; 
+        max-width: 800px;
+        overflow: hidden; /* Evita que o gráfico estoure o papel visual */
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 20px 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -98,121 +40,165 @@ st.markdown("""
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.header("🏢 Dados do Cabeçalho")
-    nome_empresa = st.text_input("Nome da Empresa:", value="SUA EMPRESA LTDA")
-    nome_cliente = st.text_input("Nome do Cliente:", value="CLIENTE EXEMPLO")
-    titulo_fluxo = st.text_input("Título do Processo:", value="FLUXOGRAMA OPERACIONAL")
+    cliente = st.text_input("Nome do Cliente:", value="Empresa Modelo Ltda")
+    titulo_fluxo = st.text_input("Título do Processo:", value="Fluxo de Produção v1.0")
     
     st.markdown("---")
-    st.header("🔑 API Gemini")
-    api_key = st.text_input("API Key:", type="password")
+    st.header("🎨 Estilo & Layout")
     
+    # Orientação define o A4
+    orientacao = st.radio("Orientação do Papel:", ["Retrato (Vertical)", "Paisagem (Horizontal)"])
+    
+    # Cores
+    col_cor1, col_cor2 = st.columns(2)
+    with col_cor1:
+        cor_processo = st.color_picker("Processos:", "#E1F5FE")
+        cor_decisao = st.color_picker("Decisões:", "#FFF9C4")
+    with col_cor2:
+        cor_inicio = st.color_picker("Início/Fim:", "#EEEEEE")
+        cor_setas = st.color_picker("Setas:", "#424242")
+
     st.markdown("---")
-    st.header("🎨 Estilo do Gráfico")
-    cor_box = st.color_picker("Cor dos Processos:", "#E3F2FD")
-    cor_dec = st.color_picker("Cor das Decisões:", "#FFF3E0")
-    direcao = st.selectbox("Orientação do Fluxo:", ["Vertical (Cima para Baixo)", "Horizontal (Esquerda para Direita)"])
-    rankdir = "TB" if "Vertical" in direcao else "LR"
+    st.header("🔑 Sistema")
+    api_key = st.text_input("API Key (Gemini):", type="password")
 
-# --- ÁREA DE ENTRADA ---
-st.title("📊 Gerador de Fluxogramas Profissionais")
-st.info("Preencha os dados e clique em 'Gerar'. Para salvar em PDF, use o botão de imprimir e selecione 'Salvar como PDF'.")
-
-col_in, col_btn = st.columns([3, 1])
-
-with col_in:
-    texto_padrao = """Início do Processo.
-Análise de Pedido.
-Se estoque disponível, separar material.
-Se estoque indisponível, solicitar compra.
-Embalagem e Envio.
-Fim."""
-    descricao = st.text_area("Descreva as etapas (uma por linha):", value=texto_padrao, height=150)
-
-with col_btn:
-    st.write("###")
-    gerar = st.button("🪄 Gerar Fluxograma", use_container_width=True, type="primary")
-    
-    if 'codigo_dot' in st.session_state:
-        # Botão que aciona o print do navegador
-        st.markdown("""
-            <button onclick="window.print()" style="width: 100%; height: 3em; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                🖨️ Exportar para PDF
-            </button>
-        """, unsafe_allow_html=True)
-
-# --- PROCESSAMENTO COM IA ---
-if gerar:
-    if not api_key:
-        st.error("Por favor, insira sua API Key na barra lateral.")
-    else:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        
-        # Prompt otimizado para Graphviz estético
-        prompt = f"""
-        Crie um código Graphviz DOT profissional para o seguinte processo: "{descricao}"
-        
-        REGRAS DE ESTILO:
-        1. Orientação: rankdir={rankdir}
-        2. Fonte: fontname="Segoe UI, Arial"
-        3. Nós de Início/Fim: shape=ellipse, style=filled, fillcolor="#F5F5F5", color="#7F8C8D", penwidth=2
-        4. Nós de Processo: shape=box, style="filled,rounded", fillcolor="{cor_box}", color="#1976D2", penwidth=1.5
-        5. Nós de Decisão: shape=diamond, style=filled, fillcolor="{cor_dec}", color="#F57C00", penwidth=1.5
-        6. Linhas (Arestas): color="#34495E", arrowhead=vee, fontname="Segoe UI", fontsize=10
-        7. Retorne APENAS o código DOT dentro de um bloco de código ```dot ... ```
-        """
-        
-        with st.spinner("A IA está desenhando seu fluxograma..."):
-            try:
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-                if res.status_code == 200:
-                    data = res.json()
-                    texto = data['candidates'][0]['content']['parts'][0]['text']
-                    match = re.search(r'```(?:dot)?\s*(.*?)```', texto, re.DOTALL)
-                    if match:
-                        st.session_state.codigo_dot = match.group(1)
-                    else:
-                        st.error("A IA não formatou o código corretamente. Tente novamente.")
-                else:
-                    st.error(f"Erro na API do Gemini: {res.status_code}")
-            except Exception as e:
-                st.error(f"Erro de conexão: {e}")
-
-# --- EXIBIÇÃO DO DOCUMENTO A4 ---
-if 'codigo_dot' in st.session_state:
-    st.markdown("---")
-    # Renderização da "Folha A4" usando HTML/CSS
-    st.markdown(f"""
-        <div class="a4-page">
-            <table class="header-table">
-                <tr>
-                    <td colspan="2" class="header-title">{nome_empresa}</td>
-                </tr>
-                <tr>
-                    <td width="50%">
-                        <span class="info-label">Cliente</span>
-                        <span class="info-value">{nome_cliente}</span>
-                    </td>
-                    <td width="50%">
-                        <span class="info-label">Processo</span>
-                        <span class="info-value">{titulo_fluxo}</span>
-                    </td>
-                </tr>
-            </table>
-            <div class="chart-container">
-    """, unsafe_allow_html=True)
-    
-    # Renderiza o gráfico do Graphviz
-    st.graphviz_chart(st.session_state.codigo_dot, use_container_width=True)
-    
-    st.markdown("""
-            </div>
-            <div style="margin-top: 20px; text-align: right; font-size: 8pt; color: #bdc3c7; border-top: 1px solid #eee; padding-top: 5px;">
-                Documento Gerado Automaticamente | Sistema de Fluxogramas Pro
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+# --- LÓGICA DE TAMANHO A4 ---
+# Define dimensões exatas em polegadas para o Graphviz
+if "Retrato" in orientacao:
+    rankdir = "TB" # Top to Bottom
+    # A4 Retrato: 8.27 x 11.69 polegadas
+    # O '!' força o Graphviz a preencher essa área
+    size_attr = 'size="8.27,11.69!"' 
+    ratio_attr = 'ratio="fill"'
 else:
-    st.info("Aguardando geração do fluxograma...")
+    rankdir = "LR" # Left to Right
+    # A4 Paisagem: 11.69 x 8.27 polegadas
+    size_attr = 'size="11.69,8.27!"'
+    ratio_attr = 'ratio="fill"'
+
+# --- ÁREA PRINCIPAL ---
+st.title(f"📄 Gerador de Documentação de Processos")
+
+col1, col2 = st.columns([1, 1.5])
+
+with col1:
+    st.subheader("1. Descreva o Processo")
+    texto_padrao = """Início do turno.
+Verificar ordem de produção.
+Matéria-prima disponível?
+Se sim, iniciar mistura.
+Se não, solicitar ao almoxarifado e aguardar.
+Mistura concluída.
+Envase do produto.
+Fim do processo."""
+    descricao = st.text_area("Etapas (Linha por linha):", value=texto_padrao, height=450)
+    
+    st.info("💡 Dica: Seja claro nas condições 'Se... Então...' para gerar as decisões corretamente.")
+    
+    gerar = st.button("🚀 Gerar Fluxograma A4", type="primary")
+
+with col2:
+    st.subheader("2. Visualização & Exportação")
+    
+    if gerar:
+        if not api_key:
+            st.error("⚠️ Por favor, insira sua API Key na barra lateral.")
+        else:
+            modelo_escolhido = "gemini-2.5-flash"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo_escolhido}:generateContent?key={api_key}"
+            headers = {'Content-Type': 'application/json'}
+            
+            # Prompt Engenharia de Prompt para Graphviz
+            prompt = f"""
+            Aja como um especialista em documentação técnica. Crie um código Graphviz (DOT) para este processo:
+            "{descricao}"
+            
+            REGRAS OBRIGATÓRIAS DE ESTRUTURA (DOT):
+            1. Cabeçalho do Gráfico:
+               - label=<<B><FONT POINT-SIZE="24">{titulo_fluxo}</FONT></B><BR/><FONT POINT-SIZE="16">{cliente}</FONT>>;
+               - labelloc="t"; (Top)
+               - {size_attr}; (Tamanho A4)
+               - {ratio_attr};
+               - rankdir={rankdir};
+               - splines=ortho; (Linhas retas/ortogonais)
+               - nodesep=0.6; ranksep=0.6; margin=0.5;
+            
+            2. Estilo dos Nós:
+               - Fonte: Helvetica ou Arial.
+               - Início/Fim: shape=ellipse, style="filled", fillcolor="{cor_inicio}", penwidth=2.
+               - Ação/Processo: shape=box, style="filled,rounded", fillcolor="{cor_processo}", penwidth=1.5.
+               - Decisão (Se/Então): shape=diamond, style="filled", fillcolor="{cor_decisao}", penwidth=1.5.
+            
+            3. Estilo das Arestas:
+               - color="{cor_setas}"; fontcolor="{cor_setas}"; arrowhead=vee;
+               - IMPORTANTE: Rotule as arestas de decisão com "Sim", "Não", "Aprovado", etc.
+            
+            4. SAÍDA:
+               - Retorne APENAS o código DOT dentro de blocos
+```dot ...
+```.
+            """
+            
+            data = {"contents": [{"parts": [{"text": prompt}]}]}
+
+            with st.spinner('Renderizando layout vetorial...'):
+                try:
+                    response = requests.post(url, headers=headers, data=json.dumps(data))
+                    
+                    if response.status_code == 200:
+                        resultado = response.json()
+                        try:
+                            texto = resultado['candidates'][0]['content']['parts'][0]['text']
+                            
+                            # Extração robusta (evita erros de quebra de linha)
+                            padrao_regex = r"""
+```(?:dot)?\s*(.*?)
+```"""
+                            match = re.search(padrao_regex, texto, re.DOTALL)
+                            
+                            codigo_dot = match.group(1) if match else texto.replace("
+```dot", "").replace("
+```", "").strip()
+                            
+                            # 1. Renderiza na tela (Visualização Web)
+                            st.markdown('<div class="a4-container">', unsafe_allow_html=True)
+                            st.graphviz_chart(codigo_dot, use_container_width=True)
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            
+                            # 2. Gera o PDF para Download (Processamento Real)
+                            try:
+                                src = graphviz_lib.Source(codigo_dot)
+                                # Renderiza o PDF em memória
+                                pdf_bytes = src.pipe(format='pdf')
+                                
+                                st.success("✅ Documento gerado com sucesso!")
+                                
+                                # Botão de Download
+                                col_dl1, col_dl2 = st.columns([2,1])
+                                with col_dl1:
+                                    st.download_button(
+                                        label="📄 BAIXAR PDF (PRONTO PARA IMPRESSÃO)",
+                                        data=pdf_bytes,
+                                        file_name=f"Fluxograma_{cliente.replace(' ', '_')}.pdf",
+                                        mime="application/pdf",
+                                        use_container_width=True
+                                    )
+                                with col_dl2:
+                                    with st.popover("Ver Código Fonte"):
+                                        st.code(codigo_dot, language="dot")
+                                        
+                            except Exception as e_pdf:
+                                st.warning("Visualização criada, mas erro ao gerar arquivo PDF.")
+                                st.error(f"Erro: {e_pdf}")
+                                st.info("Certifique-se de que o software 'Graphviz' está instalado no servidor/máquina.")
+
+                        except Exception as e_parse:
+                            st.error("Erro ao interpretar a resposta do modelo.")
+                            st.write(texto)
+                    else:
+                        st.error(f"Erro na API: {response.status_code}")
+                except Exception as e_conn:
+                    st.error(f"Erro de conexão: {e_conn}")
 
 st.markdown("---")
-st.caption("v5.2 - Otimizado para Impressão A4 e Exportação PDF Direta")
+st.caption("Gerador de Fluxogramas Pro - Engine: Gemini 2.5 Flash")
