@@ -11,7 +11,7 @@ API_KEY_FIXA = "AIzaSyAjbsaiRmACVhH0vXwuoV-NteCdo4I99VE"  # <--- COLE SUA CHAVE 
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
+st.set_page_config(page_title="Gerador A4 Pro", page_icon="🌿", layout="wide")
 
 st.markdown("""
 <style>
