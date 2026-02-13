@@ -2,31 +2,26 @@ import streamlit as st
 import google.generativeai as genai
 import re
 
-# Configuração da página (título e layout)
+# Configuração da página
 st.set_page_config(page_title="Fluxograma", layout="wide")
-
-# Título curto e grosso
 st.title("Fluxograma de Processo Industrial")
 
-# --- BARRA LATERAL (Configuração) ---
+# --- BARRA LATERAL ---
 with st.sidebar:
     st.header("Configuração")
-    # Pede a chave da API (segurança primeiro)
     api_key = st.text_input("Cole sua API Key do Google Gemini:", type="password")
-    st.markdown("[Obter chave gratuita aqui](https://aistudio.google.com/app/apikey)")
+    st.markdown("[Obter chave gratuita](https://aistudio.google.com/app/apikey)")
 
 # --- ÁREA PRINCIPAL ---
 col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("Descreva o Processo")
-    # O valor padrão já serve de exemplo pro usuário
     texto_padrao = """Recebimento de matéria-prima.
 Se a qualidade for boa, vai para o estoque.
 Se a qualidade for ruim, devolve para o fornecedor.
 Do estoque, vai para a produção.
 Embala e envia."""
-    
     descricao = st.text_area("Digite as etapas aqui:", value=texto_padrao, height=300)
     gerar = st.button("Gerar Fluxograma", type="primary")
 
@@ -37,10 +32,12 @@ if gerar:
     else:
         try:
             # Configura a IA
-          model = genai.GenerativeModel('gemini-pro')
-            model = genai.GenerativeModel('gemini-1.5-flash') # Modelo rápido e barato
+            genai.configure(api_key=api_key)
+            
+            # AQUI ESTAVA O ERRO (Agora corrigido e com modelo PRO)
+            model = genai.GenerativeModel('gemini-pro')
 
-            # O PROMPT DE COMANDO (A ordem que garante o resultado)
+            # O PROMPT DE COMANDO
             prompt_sistema = f"""
             Aja como um especialista em engenharia de produção e processos industriais.
             Sua missão: Ler a descrição de um processo e transformá-lo em código Graphviz (DOT) válido.
@@ -61,19 +58,14 @@ if gerar:
             with st.spinner('Processando a estratégia...'):
                 response = model.generate_content(prompt_sistema)
                 
-                # Limpeza do texto para pegar só o código DOT (tira os ```dot ... ```)
                 texto_resposta = response.text
                 match = re.search(r'```(?:dot)?\s*(.*?)```', texto_resposta, re.DOTALL)
                 
                 if match:
                     codigo_dot = match.group(1)
-                    
-                    # Renderiza na coluna 2
                     with col2:
                         st.subheader("Visualização")
                         st.graphviz_chart(codigo_dot)
-                        
-                        # Mostra o código se quiser auditar
                         with st.expander("Ver código fonte (DOT)"):
                             st.code(codigo_dot)
                 else:
@@ -82,6 +74,5 @@ if gerar:
         except Exception as e:
             st.error(f"Falha na missão: {e}")
 
-# Rodapé simples
 st.markdown("---")
 st.caption("Ferramenta interna de mapeamento de processos.")
