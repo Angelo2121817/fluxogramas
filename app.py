@@ -35,7 +35,7 @@ if gerar:
             genai.configure(api_key=api_key)
             
             # AQUI ESTAVA O ERRO (Agora corrigido e com modelo PRO)
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-1.5-flash')
 
             # O PROMPT DE COMANDO
             prompt_sistema = f"""
