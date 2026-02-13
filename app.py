@@ -169,4 +169,4 @@ with col_preview:
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.markdown('<div class="footer">DESENVOLVIDO POR METAL QUÍMICA CONSULTORIA</div>', unsafe_allow_html=True)
+st.markdown('<div class="footer">Desenvolvido por Metal Química Consultoria</div>', unsafe_allow_html=True)
