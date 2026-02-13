@@ -2,208 +2,174 @@ import streamlit as st
 import requests
 import json
 import re
-import base64
+import graphviz as graphviz_lib
+
+# ==========================================
+# 🔐 ÁREA DE SEGURANÇA (Sua Chave Aqui)
+# ==========================================
+# Cole sua API Key dentro das aspas abaixo:
+API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q" 
+# ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Gerador de Fluxograma A4 Pro", layout="wide")
+st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
 
-# Estilo CSS para simular A4 e formatar impressão/layout
+# CSS para visualização na tela (Simulação A4)
 st.markdown("""
     <style>
-    /* Estilo para a folha A4 na tela */
-    .a4-page {
+    .main { background-color: #555; } /* Fundo escuro para destacar o papel */
+    .stApp { background-color: #555; }
+    
+    /* Folha A4 na tela */
+    .a4-preview {
         background-color: white;
         width: 210mm;
         min-height: 297mm;
-        padding: 15mm;
-        margin: 20px auto;
-        box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        display: flex;
-        flex-direction: column;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        border: 1px solid #ddd;
-        overflow: hidden; /* Garante que nada saia da folha */
-    }
-    
-    .header-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        border: 2px solid #2c3e50;
-    }
-    
-    .header-table td {
-        border: 1px solid #2c3e50;
-        padding: 10px;
-    }
-    
-    .header-title {
-        font-size: 18pt;
-        font-weight: bold;
-        text-align: center;
-        background-color: #f8f9fa;
-        color: #2c3e50;
-    }
-    
-    .info-label {
-        font-weight: bold;
-        font-size: 9pt;
-        color: #7f8c8d;
-        display: block;
-    }
-    
-    .info-value {
-        font-size: 11pt;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-    
-    /* Container do Gráfico: Força o conteúdo a caber no A4 */
-    .chart-wrapper {
-        flex-grow: 1;
-        width: 100%;
+        padding: 0; /* O padding será controlado pelo gráfico */
+        margin: 0 auto;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
         display: flex;
         justify-content: center;
-        align-items: flex-start;
-        padding-top: 20px;
+        align-items: center;
     }
     
-    /* Esconde elementos na impressão */
-    @media print {
-        .stButton, .stSidebar, header, footer, .stDownloadButton, .no-print {
-            display: none !important;
-        }
-        .main .block-container {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        .a4-page {
-            margin: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-            width: 100% !important;
-            height: auto !important;
-        }
-    }
+    h1, h2, h3 { color: white !important; }
+    .stTextInput > label, .stTextArea > label { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BARRA LATERAL ---
+# --- BARRA LATERAL (INPUTS) ---
 with st.sidebar:
-    st.header("🏢 Identificação")
-    nome_empresa = st.text_input("Nome da Empresa:", value="SUA EMPRESA LTDA")
-    nome_cliente = st.text_input("Nome do Cliente:", value="CLIENTE EXEMPLO")
-    titulo_fluxo = st.text_input("Título do Processo:", value="FLUXOGRAMA OPERACIONAL")
+    st.header("📝 Dados do Documento")
+    empresa = st.text_input("Empresa:", value="SUA EMPRESA ENGENHARIA")
+    cliente = st.text_input("Cliente:", value="Cliente Final Ltda")
+    titulo_doc = st.text_input("Título do Fluxo:", value="Procedimento Operacional Padrão")
+    data_rev = st.text_input("Data/Revisão:", value="Fev/2026 - Rev.01")
     
     st.markdown("---")
-    st.header("🔑 Configuração")
-    api_key = st.text_input("API Key do Gemini:", type="password")
+    st.header("🎨 Layout")
+    orientacao = st.radio("Orientação:", ["Retrato (Vertical)", "Paisagem (Horizontal)"])
     
     st.markdown("---")
-    st.header("🎨 Visual")
-    cor_box = st.color_picker("Cor dos Processos:", "#E3F2FD")
-    cor_dec = st.color_picker("Cor das Decisões:", "#FFF3E0")
-    direcao = st.selectbox("Orientação:", ["Vertical", "Horizontal"], index=0)
-    rankdir = "TB" if direcao == "Vertical" else "LR"
+    st.info("Sistema rodando com Gemini 2.5 Flash")
 
-# --- INTERFACE PRINCIPAL ---
-st.title("🛠️ Gerador de Fluxogramas Profissionais")
+# --- ÁREA PRINCIPAL ---
+st.title("🖨️ Gerador de Fluxogramas A4 (PDF Engine)")
 
-col_desc, col_ops = st.columns([3, 1])
+col_input, col_preview = st.columns([1, 2])
 
-with col_desc:
-    texto_padrao = """Início do Processo.
-Análise de Pedido.
-Se estoque disponível, separar material.
-Se estoque indisponível, solicitar compra.
-Embalagem e Envio.
+with col_input:
+    st.subheader("Lógica do Processo")
+    texto_padrao = """Início.
+Verificar documentos.
+Documentos válidos?
+Se sim, aprovar cadastro.
+Se não, solicitar revisão.
 Fim."""
-    descricao = st.text_area("Descreva as etapas linha por linha:", value=texto_padrao, height=150)
-
-with col_ops:
-    st.write("###")
-    gerar = st.button("🚀 Gerar Fluxograma", use_container_width=True, type="primary")
+    descricao = st.text_area("Descreva as etapas:", value=texto_padrao, height=300)
     
-    if 'codigo_dot' in st.session_state:
-        # Botão de Download PDF (via Print do Navegador para garantir fidelidade visual)
-        st.markdown("""
-            <button onclick="window.print()" style="width:100%; height:3em; background-color:#28a745; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; margin-bottom:10px;">
-                📥 Baixar PDF / Imprimir
-            </button>
-        """, unsafe_allow_html=True)
-        st.info("💡 Na tela que abrir, escolha 'Salvar como PDF' para baixar o arquivo.")
+    gerar = st.button("Gerar Documento PDF", type="primary", use_container_width=True)
+    
+    st.warning("Nota: O PDF gerado já incluirá o cabeçalho e as margens corretas para impressão.")
 
-# --- LÓGICA DE GERAÇÃO ---
-if gerar:
-    if not api_key:
-        st.error("⚠️ Insira a API Key na lateral para gerar.")
-    else:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        
-        # Prompt otimizado para manter o gráfico compacto e dentro do A4
-        prompt = f"""
-        Crie um código Graphviz DOT para o processo: "{descricao}"
-        
-        REGRAS PARA CABER NO A4:
-        1. Use rankdir={rankdir}.
-        2. Adicione 'size="7.5,10!"' no início do código (isso força o gráfico a caber na página).
-        3. Use 'ratio=fill'.
-        4. Estilo:
-           - Início/Fim: ellipse, style=filled, fillcolor="#F5F5F5"
-           - Processo: box, style="filled,rounded", fillcolor="{cor_box}", color="#1976D2"
-           - Decisão: diamond, style=filled, fillcolor="{cor_dec}", color="#F57C00"
-        5. Retorne APENAS o código DOT em ```dot ... ```
-        """
-        
-        with st.spinner("Desenhando documento..."):
-            try:
-                res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
-                if res.status_code == 200:
-                    texto_ia = res.json()['candidates'][0]['content']['parts'][0]['text']
-                    match = re.search(r'```(?:dot)?\s*(.*?)```', texto_ia, re.DOTALL)
-                    if match:
-                        st.session_state.codigo_dot = match.group(1)
+with col_preview:
+    if gerar:
+        # Verifica se a chave foi colocada no código
+        if not API_KEY_FIXA:
+            st.error("❌ ERRO: Você esqueceu de colocar a API Key na linha 7 do código!")
+        else:
+            # Configuração A4 baseada na orientação
+            if "Retrato" in orientacao:
+                rankdir = "TB"
+                # A4 em polegadas com margem de segurança
+                size_attr = 'size="8.27,11.69!"'
+            else:
+                rankdir = "LR"
+                size_attr = 'size="11.69,8.27!"'
+
+            # Prompt Avançado: Injeta o cabeçalho HTML dentro do Graphviz
+            prompt = f"""
+            Crie um código Graphviz (DOT) para este processo: "{descricao}"
+            
+            REGRAS OBRIGATÓRIAS DE ESTRUTURA:
+            1. Use HTML-like Labels para criar um cabeçalho profissional NO TOPO do gráfico.
+            2. Configuração do Graph:
+               graph [
+                 fontname="Helvetica"; fontsize=10;
+                 {size_attr}; ratio="fill"; margin=0.5;
+                 rankdir={rankdir}; splines=ortho; nodesep=0.6; ranksep=0.6;
+                 label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%">
+                   <TR>
+                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="18">{empresa}</FONT></B></TD>
+                   </TR>
+                   <TR>
+                     <TD ALIGN="LEFT" WIDTH="50%">Cliente: <B>{cliente}</B></TD>
+                     <TD ALIGN="RIGHT" WIDTH="50%">Ref: <B>{data_rev}</B></TD>
+                   </TR>
+                   <TR>
+                     <TD ALIGN="CENTER" COLSPAN="2" BGCOLOR="#333333"><FONT COLOR="WHITE"><B>{titulo_doc}</B></FONT></TD>
+                   </TR>
+                 </TABLE>>;
+                 labelloc="t";
+               ];
+            
+            3. Estilo dos Nós:
+               node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5];
+               edge [fontname="Helvetica", fontsize=9, color="#555555"];
+            
+            4. Nós Especiais:
+               - Início/Fim: shape=ellipse, fillcolor="#444444", fontcolor="white".
+               - Decisão: shape=diamond, fillcolor="#FFF9C4".
+            
+            5. Retorne APENAS o código DOT dentro de
+```dot ...
+```.
+            """
+
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY_FIXA}"
+            
+            with st.spinner("Renderizando vetorização A4..."):
+                try:
+                    response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+                    
+                    if response.status_code == 200:
+                        texto = response.json()['candidates'][0]['content']['parts'][0]['text']
+                        
+                        # Extração Segura
+                        padrao = r"""
+```(?:dot)?\s*(.*?)
+```"""
+                        match = re.search(padrao, texto, re.DOTALL)
+                        
+                        codigo_dot = match.group(1) if match else texto.replace("
+```dot", "").replace("
+```", "").strip()
+                        
+                        # 1. Visualização na Tela (SVG)
+                        st.markdown('<div class="a4-preview">', unsafe_allow_html=True)
+                        st.graphviz_chart(codigo_dot, use_container_width=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
+                        # 2. Geração do PDF Real (Backend)
+                        try:
+                            src = graphviz_lib.Source(codigo_dot)
+                            pdf_bytes = src.pipe(format='pdf')
+                            
+                            st.success("✅ Documento pronto!")
+                            st.download_button(
+                                label="⬇️ BAIXAR PDF (A4 FINAL)",
+                                data=pdf_bytes,
+                                file_name="Fluxograma_A4.pdf",
+                                mime="application/pdf",
+                                use_container_width=True
+                            )
+                        except Exception as e:
+                            st.error("Erro na conversão PDF. Verifique se o Graphviz está instalado no sistema.")
+                            st.code(str(e))
+                            
                     else:
-                        st.error("Erro ao interpretar resposta da IA.")
-                else:
-                    st.error(f"Erro na API: {res.status_code}")
-            except Exception as e:
-                st.error(f"Erro: {e}")
+                        st.error(f"Erro API: {response.status_code}")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
 
-# --- RENDERIZAÇÃO DA FOLHA A4 ---
-if 'codigo_dot' in st.session_state:
-    st.markdown("---")
-    # A estrutura HTML abaixo garante que o cabeçalho e o gráfico fiquem dentro da folha
-    st.markdown(f"""
-        <div class="a4-page">
-            <table class="header-table">
-                <tr>
-                    <td colspan="2" class="header-title">{nome_empresa.upper()}</td>
-                </tr>
-                <tr>
-                    <td width="50%">
-                        <span class="info-label">CLIENTE</span>
-                        <span class="info-value">{nome_cliente.upper()}</span>
-                    </td>
-                    <td width="50%">
-                        <span class="info-label">PROCESSO</span>
-                        <span class="info-value">{titulo_fluxo.upper()}</span>
-                    </td>
-                </tr>
-            </table>
-            <div class="chart-wrapper">
-    """, unsafe_allow_html=True)
-    
-    # O Streamlit renderiza o gráfico aqui. 
-    # use_container_width=True faz com que ele respeite os limites da nossa div 'a4-page'
-    st.graphviz_chart(st.session_state.codigo_dot, use_container_width=True)
-    
-    st.markdown("""
-            </div>
-            <div style="margin-top:20px; text-align:right; font-size:8pt; color:#bdc3c7; border-top:1px solid #eee; padding-top:5px;">
-                Gerado via Sistema de Fluxogramas Industrial | Página 1 de 1
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    st.info("Preencha os dados e clique em 'Gerar Fluxograma' para visualizar o documento.")
+st.caption("Sistema de Engenharia de Processos v6.0")
