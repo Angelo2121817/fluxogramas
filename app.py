@@ -27,10 +27,21 @@ st.markdown("""
         display: flex;
         justify-content: center;
         background-color: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 40px; /* Margem interna para simular a borda do papel */
+        border-radius: 2px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Sombra de papel */
         margin-top: 20px;
+        min-height: 800px; /* Altura mínima visual */
+    }
+    
+    /* Rodapé personalizado */
+    .footer {
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+        margin-top: 50px;
+        font-weight: bold;
+        text-transform: uppercase;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -70,32 +81,31 @@ with col_preview:
         else:
             if "Retrato" in orientacao:
                 rankdir = "TB"
-                # A4 Retrato
+                # A4 Retrato (Polegadas)
                 size_attr = 'size="8.27,11.69!"'
             else:
                 rankdir = "LR"
-                # A4 Paisagem
+                # A4 Paisagem (Polegadas)
                 size_attr = 'size="11.69,8.27!"'
 
             prompt = f"""
             Crie um código Graphviz (DOT) para este processo: "{descricao}"
             
-            REGRAS OBRIGATÓRIAS DE ESTRUTURA (MAXIMIZAR ESPAÇO):
+            REGRAS OBRIGATÓRIAS DE ESTRUTURA:
             1. Use HTML-like Labels para criar um cabeçalho profissional NO TOPO do gráfico.
-            2. Configuração do Graph (ESPALHAR NÓS):
+            2. Configuração do Graph:
                graph [
-                 fontname="Helvetica"; fontsize=12;
+                 fontname="Helvetica"; fontsize=10;
                  {size_attr}; 
-                 ratio="auto";  // Deixa o gráfico crescer naturalmente
-                 margin=0.2;    // Margem pequena para aproveitar a folha
+                 // REMOVIDO ratio="fill" para evitar esticamento
+                 margin=0.5;
                  rankdir={rankdir}; 
                  splines=ortho; 
-                 nodesep=1.0;   // AUMENTADO: Espalha os nós lateralmente
-                 ranksep=1.2;   // AUMENTADO: Espalha os níveis verticalmente
-                 pack=true;
+                 nodesep=0.8; // Espaçamento lateral equilibrado
+                 ranksep=0.8; // Espaçamento vertical equilibrado
                  label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%">
                    <TR>
-                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="20">{empresa}</FONT></B></TD>
+                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="18">{empresa}</FONT></B></TD>
                    </TR>
                    <TR>
                      <TD ALIGN="LEFT" WIDTH="50%">Cliente: <B>{cliente}</B></TD>
@@ -108,9 +118,9 @@ with col_preview:
                  labelloc="t";
                ];
             
-            3. Estilo dos Nós (GRANDES E LEGÍVEIS):
-               node [fontname="Helvetica", fontsize=12, shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5, height=0.6, width=1.5];
-               edge [fontname="Helvetica", fontsize=10, color="#555555", minlen=2]; // minlen força setas mais longas
+            3. Estilo dos Nós:
+               node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5];
+               edge [fontname="Helvetica", fontsize=9, color="#555555"];
             
             4. Nós Especiais:
                - Início/Fim: shape=ellipse, fillcolor="#444444", fontcolor="white".
@@ -121,7 +131,7 @@ with col_preview:
 
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY_FIXA}"
             
-            with st.spinner("Otimizando layout para A4..."):
+            with st.spinner("Renderizando vetorização A4..."):
                 try:
                     response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                     
@@ -163,4 +173,4 @@ with col_preview:
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.caption("Sistema de Engenharia de Processos v7.3")
+st.markdown('<div class="footer">DESENVOLVIDO POR METAL QUÍMICA CONSULTORIA</div>', unsafe_allow_html=True)
