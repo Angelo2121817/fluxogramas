@@ -22,13 +22,11 @@ st.markdown("""
     /* Ajuste de Texto */
     h1, h2, h3, p, label { color: #333 !important; }
     
-    /* REMOVIDO: A div .a4-preview que causava a duplicidade */
-    
     /* Estilo para centralizar o gráfico na tela */
     .stGraphvizChart {
         display: flex;
         justify-content: center;
-        background-color: white; /* O fundo branco fica no próprio gráfico */
+        background-color: white;
         padding: 20px;
         border-radius: 5px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -72,24 +70,32 @@ with col_preview:
         else:
             if "Retrato" in orientacao:
                 rankdir = "TB"
+                # A4 Retrato
                 size_attr = 'size="8.27,11.69!"'
             else:
                 rankdir = "LR"
+                # A4 Paisagem
                 size_attr = 'size="11.69,8.27!"'
 
             prompt = f"""
             Crie um código Graphviz (DOT) para este processo: "{descricao}"
             
-            REGRAS OBRIGATÓRIAS DE ESTRUTURA:
+            REGRAS OBRIGATÓRIAS DE ESTRUTURA (MAXIMIZAR ESPAÇO):
             1. Use HTML-like Labels para criar um cabeçalho profissional NO TOPO do gráfico.
-            2. Configuração do Graph:
+            2. Configuração do Graph (ESPALHAR NÓS):
                graph [
-                 fontname="Helvetica"; fontsize=10;
-                 {size_attr}; ratio="fill"; margin=0.5;
-                 rankdir={rankdir}; splines=ortho; nodesep=0.6; ranksep=0.6;
+                 fontname="Helvetica"; fontsize=12;
+                 {size_attr}; 
+                 ratio="auto";  // Deixa o gráfico crescer naturalmente
+                 margin=0.2;    // Margem pequena para aproveitar a folha
+                 rankdir={rankdir}; 
+                 splines=ortho; 
+                 nodesep=1.0;   // AUMENTADO: Espalha os nós lateralmente
+                 ranksep=1.2;   // AUMENTADO: Espalha os níveis verticalmente
+                 pack=true;
                  label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%">
                    <TR>
-                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="18">{empresa}</FONT></B></TD>
+                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="20">{empresa}</FONT></B></TD>
                    </TR>
                    <TR>
                      <TD ALIGN="LEFT" WIDTH="50%">Cliente: <B>{cliente}</B></TD>
@@ -102,9 +108,9 @@ with col_preview:
                  labelloc="t";
                ];
             
-            3. Estilo dos Nós:
-               node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5];
-               edge [fontname="Helvetica", fontsize=9, color="#555555"];
+            3. Estilo dos Nós (GRANDES E LEGÍVEIS):
+               node [fontname="Helvetica", fontsize=12, shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5, height=0.6, width=1.5];
+               edge [fontname="Helvetica", fontsize=10, color="#555555", minlen=2]; // minlen força setas mais longas
             
             4. Nós Especiais:
                - Início/Fim: shape=ellipse, fillcolor="#444444", fontcolor="white".
@@ -115,7 +121,7 @@ with col_preview:
 
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY_FIXA}"
             
-            with st.spinner("Renderizando vetorização A4..."):
+            with st.spinner("Otimizando layout para A4..."):
                 try:
                     response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                     
@@ -129,7 +135,7 @@ with col_preview:
                             codigo_limpo = texto[inicio:]
                             codigo_limpo = re.sub(r'`+$', '', codigo_limpo.strip())
                             
-                            # 1. Visualização na Tela (Sem container duplicado)
+                            # 1. Visualização na Tela
                             st.graphviz_chart(codigo_limpo, use_container_width=True)
                             
                             # 2. Geração do PDF
@@ -157,4 +163,4 @@ with col_preview:
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.caption("Sistema de Engenharia de Processos v7.2")
+st.caption("Sistema de Engenharia de Processos v7.3")
