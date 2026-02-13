@@ -15,27 +15,25 @@ st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
 
 st.markdown("""
 <style>
-    /* Fundo Claro (Cinza Suave) */
+    /* Fundo Geral Claro */
     .main { background-color: #f4f4f4; }
     .stApp { background-color: #f4f4f4; }
     
-    /* Folha A4 na tela - Branca com sombra */
-    .a4-preview {
-        background-color: white;
-        width: 210mm;
-        min-height: 297mm;
-        padding: 0;
-        margin: 0 auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    /* Ajuste de Texto */
+    h1, h2, h3, p, label { color: #333 !important; }
+    
+    /* REMOVIDO: A div .a4-preview que causava a duplicidade */
+    
+    /* Estilo para centralizar o gráfico na tela */
+    .stGraphvizChart {
         display: flex;
         justify-content: center;
-        align-items: center;
+        background-color: white; /* O fundo branco fica no próprio gráfico */
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-top: 20px;
     }
-    
-    /* Ajuste de cores dos textos para fundo claro */
-    h1, h2, h3 { color: #333 !important; }
-    .stTextInput > label, .stTextArea > label { color: #333 !important; }
-    .stMarkdown p { color: #444 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -129,13 +127,10 @@ with col_preview:
                         
                         if inicio != -1:
                             codigo_limpo = texto[inicio:]
-                            # Remove crases finais usando regex
                             codigo_limpo = re.sub(r'`+$', '', codigo_limpo.strip())
                             
-                            # 1. Visualização na Tela
-                            st.markdown('<div class="a4-preview">', unsafe_allow_html=True)
+                            # 1. Visualização na Tela (Sem container duplicado)
                             st.graphviz_chart(codigo_limpo, use_container_width=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
                             
                             # 2. Geração do PDF
                             try:
@@ -162,4 +157,4 @@ with col_preview:
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.caption("Sistema de Engenharia de Processos v7.1")
+st.caption("Sistema de Engenharia de Processos v7.2")
