@@ -36,6 +36,7 @@ Da pesagem vai para o reator de mistura."""
     gerar = st.button("Gerar Fluxograma", type="primary")
 
 # --- EXECUÇÃO TÁTICA ---
+# --- EXECUÇÃO TÁTICA ---
 if gerar:
     if not api_key:
         st.error("Preciso da chave API para operar, Angelo.")
@@ -46,12 +47,10 @@ if gerar:
         # Define orientação para o Graphviz
         rankdir = "TB" if "Retrato" in orientacao else "LR"
         # Dimensões A4 em polegadas (aprox)
-        # O '!' força o gráfico a ocupar esse espaço
         size_attr = 'size="8.27,11.69!"' if "Retrato" in orientacao else 'size="11.69,8.27!"'
 
         headers = {'Content-Type': 'application/json'}
         
-        # Prompt Refinado para Engenharia/Processos
         prompt = f"""
         Aja como um Engenheiro de Processos Sênior. Crie um código Graphviz (DOT) para o seguinte processo:
         "{descricao}"
@@ -87,27 +86,24 @@ if gerar:
                     try:
                         texto = resultado['candidates'][0]['content']['parts'][0]['text']
                         
-                        match = re.search(r'
+                        # --- CORREÇÃO APLICADA AQUI ---
+                        match = re.search(r"
 ```(?:dot)?\s*(.*?)
-```', texto, re.DOTALL)
+```", texto, re.DOTALL)
+                        
                         if match:
                             codigo_dot = match.group(1)
                             
                             with col2:
                                 st.subheader("Visualização (Preview)")
-                                # Renderiza na tela (SVG interativo)
                                 st.graphviz_chart(codigo_dot)
                                 
-                                # --- LÓGICA DE EXPORTAÇÃO PDF ---
                                 try:
-                                    # Cria o objeto Graphviz para renderizar o arquivo
                                     src = graphviz_lib.Source(codigo_dot)
-                                    # Renderiza para PDF em memória (pipe)
                                     pdf_data = src.pipe(format='pdf')
                                     
                                     st.success("Fluxograma gerado com sucesso!")
                                     
-                                    # Botão de Download
                                     st.download_button(
                                         label="📄 Baixar PDF (Formato A4)",
                                         data=pdf_data,
@@ -115,13 +111,14 @@ if gerar:
                                         mime="application/pdf"
                                     )
                                 except Exception as e_graph:
-                                    st.warning(f"Visualização gerada, mas erro ao criar PDF para download: {e_graph}")
-                                    st.info("Dica: Instale o Graphviz no sistema (apt-get install graphviz ou baixe o instalador no Windows).")
+                                    st.warning(f"Visualização gerada, mas erro ao criar PDF: {e_graph}")
+                                    st.info("Dica: Instale o Graphviz no sistema (apt-get install graphviz).")
                                     
                                 with st.expander("Ver Código DOT"):
                                     st.code(codigo_dot)
                         else:
                             st.warning("O modelo não retornou o código formatado corretamente.")
+                            st.write(texto) # Mostra o texto cru para debug
                     except Exception as e:
                         st.error(f"Erro ao processar dados: {e}")
                 else:
@@ -129,6 +126,3 @@ if gerar:
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
-
-st.markdown("---")
-st.caption("Ferramenta de Processos - A4 Edition")
