@@ -47,7 +47,6 @@ if gerar:
         rankdir = "TB" if "Retrato" in orientacao else "LR"
         
         # Dimensões A4 em polegadas (aprox)
-        # O '!' força o gráfico a ocupar esse espaço exato
         if "Retrato" in orientacao:
             size_attr = 'size="8.27,11.69!"'
         else:
@@ -91,11 +90,13 @@ if gerar:
                     try:
                         texto = resultado['candidates'][0]['content']['parts'][0]['text']
                         
-                        # A CORREÇÃO PRINCIPAL ESTÁ AQUI:
-                        # Usando aspas duplas e garantindo que está tudo na mesma linha
-                        match = re.search(r"
+                        # --- CORREÇÃO DEFINITIVA ---
+                        # Definimos o padrão regex em uma variável separada para evitar quebras de linha
+                        padrao_regex = r"
 ```(?:dot)?\s*(.*?)
-```", texto, re.DOTALL)
+```"
+                        
+                        match = re.search(padrao_regex, texto, re.DOTALL)
                         
                         if match:
                             codigo_dot = match.group(1)
@@ -120,7 +121,7 @@ if gerar:
                                 except Exception as e_graph:
                                     st.warning("Visualização gerada, mas erro ao criar PDF.")
                                     st.error(f"Erro técnico: {e_graph}")
-                                    st.info("Dica: Verifique se o software 'Graphviz' está instalado no sistema operacional (não apenas o pip install).")
+                                    st.info("Dica: Verifique se o software 'Graphviz' está instalado no sistema operacional.")
                                     
                                 with st.expander("Ver Código DOT"):
                                     st.code(codigo_dot)
