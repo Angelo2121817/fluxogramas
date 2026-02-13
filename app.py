@@ -11,10 +11,32 @@ API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q"  # <--- COLE SUA CHAVE 
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
+# --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
 
 st.markdown("""
     <style>
+    /* Fundo geral da aplicação - Cinza Claro Suave */
+    .main { background-color: #f4f4f4; }
+    .stApp { background-color: #f4f4f4; }
+    
+    /* Folha A4 na tela - Branca com sombra suave */
+    .a4-preview {
+        background-color: white;
+        width: 210mm;
+        min-height: 297mm;
+        padding: 0;
+        margin: 0 auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* Ajuste de títulos para garantir contraste */
+    h1, h2, h3 { color: #333 !important; }
+    </style>
+    """, unsafe_allow_html=True)
     .main { background-color: #555; }
     .stApp { background-color: #555; }
     .a4-preview {
