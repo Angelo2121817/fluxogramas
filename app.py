@@ -65,7 +65,7 @@ Fim."""
 with col_preview:
     if gerar:
         if not API_KEY_FIXA:
-            st.error("❌ ERRO: Você esqueceu de colocar a API Key na linha 10 do código!")
+            st.error("ERRO: Chave API ausente.")
         else:
             if "Retrato" in orientacao:
                 rankdir = "TB"
@@ -75,83 +75,57 @@ with col_preview:
                 size_attr = 'size="11.69,8.27!"'
 
             prompt = f"""
-            Crie um código Graphviz (DOT) para este processo: "{descricao}"
+            Crie um código Graphviz (DOT) para: "{descricao}"
             
-            REGRAS OBRIGATÓRIAS DE ESTRUTURA:
-            1. Use HTML-like Labels para criar um cabeçalho profissional NO TOPO do gráfico.
-            2. Configuração do Graph:
-               graph [
-                 fontname="Helvetica"; fontsize=10;
-                 {size_attr}; ratio="fill"; margin=0.5;
-                 rankdir={rankdir}; splines=ortho; nodesep=0.6; ranksep=0.6;
-                 label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%">
-                   <TR>
-                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="18">{empresa}</FONT></B></TD>
-                   </TR>
-                   <TR>
-                     <TD ALIGN="LEFT" WIDTH="50%">Cliente: <B>{cliente}</B></TD>
-                     <TD ALIGN="RIGHT" WIDTH="50%">Ref: <B>{data_rev}</B></TD>
-                   </TR>
-                   <TR>
-                     <TD ALIGN="CENTER" COLSPAN="2" BGCOLOR="#333333"><FONT COLOR="WHITE"><B>{titulo_doc}</B></FONT></TD>
-                   </TR>
-                 </TABLE>>;
-                 labelloc="t";
-               ];
-            
-            3. Estilo dos Nós:
-               node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5];
-               edge [fontname="Helvetica", fontsize=9, color="#555555"];
-            
-            4. Nós Especiais:
-               - Início/Fim: shape=ellipse, fillcolor="#444444", fontcolor="white".
-               - Decisão: shape=diamond, fillcolor="#FFF9C4".
-            
-            5. Retorne APENAS o código DOT.
+            REGRAS:
+            1. Cabeçalho HTML no label do graph.
+            2. graph [fontname="Helvetica"; {size_attr}; ratio="fill"; margin=0.5; rankdir={rankdir}; splines=ortho; label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%"><TR><TD BGCOLOR="#DDD" COLSPAN="2"><B>{empresa}</B></TD></TR><TR><TD>Cliente: {cliente}</TD><TD>Ref: {data_rev}</TD></TR><TR><TD COLSPAN="2" BGCOLOR="#333"><FONT COLOR="WHITE"><B>{titulo_doc}</B></FONT></TD></TR></TABLE>>; labelloc="t"];
+            3. node [shape=box, style="filled,rounded", fillcolor="#E3F2FD"];
+            4. Retorne APENAS o código DOT.
             """
 
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY_FIXA}"
             
-            with st.spinner("Renderizando vetorização A4..."):
+            with st.spinner("Gerando PDF..."):
                 try:
                     response = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
                     
                     if response.status_code == 200:
                         texto = response.json()['candidates'][0]['content']['parts'][0]['text']
                         
-                        # --- LIMPEZA BLINDADA (SEM CRASES NO CÓDIGO) ---
-                        # Encontra onde começa o código real (digraph)
+                        # Bloco de limpeza seguro
                         inicio = texto.find("digraph")
                         
                         if inicio != -1:
-                            # Pega tudo a partir de 'digraph'
                             codigo_limpo = texto[inicio:]
+                            # Remove crases do final usando regex simples
+                            codigo_limpo = re.sub(r'[`]+$', '', codigo_limpo.strip())
                             
-                            # Remove qualquer caractere que não seja do Graphviz no final
-                            # Usamos regex para remover as crases finais sem escrever
-``` no código
-                            codigo_limpo = re.sub(r'`+$', '', codigo_limpo.strip())
-                            
-                            # 1. Visualização na Tela
+                            # Mostra na tela
                             st.markdown('<div class="a4-preview">', unsafe_allow_html=True)
                             st.graphviz_chart(codigo_limpo, use_container_width=True)
                             st.markdown('</div>', unsafe_allow_html=True)
                             
-                            # 2. Geração do PDF
+                            # Gera PDF
                             try:
                                 src = graphviz_lib.Source(codigo_limpo)
                                 pdf_bytes = src.pipe(format='pdf')
                                 
-                                st.success("✅ Documento pronto!")
+                                st.success("Sucesso!")
                                 st.download_button(
-                                    label="⬇️ BAIXAR PDF (A4 FINAL)",
+                                    label="BAIXAR PDF",
                                     data=pdf_bytes,
-                                    file_name="Fluxograma_A4.pdf",
-                                    mime="application/pdf",
-                                    use_container_width=True
+                                    file_name="Fluxograma.pdf",
+                                    mime="application/pdf"
                                 )
                             except Exception as e:
-                                st.error("Erro na conversão PDF.")
+                                st.error("Erro no Graphviz (PDF).")
+                        else:
+                            st.error("Erro: Código DOT não encontrado.")
+                    else:
+                        st.error(f"Erro API: {response.status_code}")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
                                 st.code(str(e))
                                 with st.expander("Ver código problemático"):
                                     st.code(codigo_limpo)
