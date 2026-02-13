@@ -7,7 +7,7 @@ import graphviz as graphviz_lib
 # ==========================================
 # 🔐 ÁREA DE SEGURANÇA
 # ==========================================
-API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q"  # <--- COLE SUA CHAVE AQUI
+API_KEY_FIXA = "AIzaSyAjbsaiRmACVhH0vXwuoV-NteCdo4I99VE"  # <--- COLE SUA CHAVE AQUI
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
@@ -27,11 +27,11 @@ st.markdown("""
         display: flex;
         justify-content: center;
         background-color: white;
-        padding: 40px; /* Margem interna para simular a borda do papel */
+        padding: 40px;
         border-radius: 2px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Sombra de papel */
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         margin-top: 20px;
-        min-height: 800px; /* Altura mínima visual */
+        min-height: 800px;
     }
     
     /* Rodapé personalizado */
@@ -48,10 +48,10 @@ st.markdown("""
 
 with st.sidebar:
     st.header("📝 Dados do Documento")
+    # Simplificado: Apenas Empresa e Título
     empresa = st.text_input("Empresa:", value="SUA EMPRESA ENGENHARIA")
-    cliente = st.text_input("Cliente:", value="Cliente Final Ltda")
-    titulo_doc = st.text_input("Título do Fluxo:", value="Procedimento Operacional Padrão")
-    data_rev = st.text_input("Data/Revisão:", value="Fev/2026 - Rev.01")
+    titulo_doc = st.text_input("Título do Fluxo:", value="Fluxograma do Processo Produtivo")
+    
     st.markdown("---")
     st.header("🎨 Layout")
     orientacao = st.radio("Orientação:", ["Retrato (Vertical)", "Paisagem (Horizontal)"])
@@ -65,10 +65,13 @@ col_input, col_preview = st.columns([1, 2])
 with col_input:
     st.subheader("Lógica do Processo")
     texto_padrao = """Início.
-Verificar documentos.
-Documentos válidos?
-Se sim, aprovar cadastro.
-Se não, solicitar revisão.
+Recebimento de Matéria-Prima.
+Inspeção de Qualidade.
+Aprovado?
+Se sim, Armazenamento.
+Se não, Devolução ao Fornecedor.
+Produção.
+Embalagem.
 Fim."""
     descricao = st.text_area("Descreva as etapas:", value=texto_padrao, height=300)
     gerar = st.button("Gerar Documento PDF", type="primary", use_container_width=True)
@@ -81,11 +84,9 @@ with col_preview:
         else:
             if "Retrato" in orientacao:
                 rankdir = "TB"
-                # A4 Retrato (Polegadas)
                 size_attr = 'size="8.27,11.69!"'
             else:
                 rankdir = "LR"
-                # A4 Paisagem (Polegadas)
                 size_attr = 'size="11.69,8.27!"'
 
             prompt = f"""
@@ -97,22 +98,17 @@ with col_preview:
                graph [
                  fontname="Helvetica"; fontsize=10;
                  {size_attr}; 
-                 // REMOVIDO ratio="fill" para evitar esticamento
                  margin=0.5;
                  rankdir={rankdir}; 
                  splines=ortho; 
-                 nodesep=0.8; // Espaçamento lateral equilibrado
-                 ranksep=0.8; // Espaçamento vertical equilibrado
+                 nodesep=0.8; 
+                 ranksep=0.8; 
                  label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" WIDTH="100%">
                    <TR>
-                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" COLSPAN="2"><B><FONT POINT-SIZE="18">{empresa}</FONT></B></TD>
+                     <TD BGCOLOR="#EEEEEE" ALIGN="CENTER" HEIGHT="40"><B><FONT POINT-SIZE="20">{empresa}</FONT></B></TD>
                    </TR>
                    <TR>
-                     <TD ALIGN="LEFT" WIDTH="50%">Cliente: <B>{cliente}</B></TD>
-                     <TD ALIGN="RIGHT" WIDTH="50%">Ref: <B>{data_rev}</B></TD>
-                   </TR>
-                   <TR>
-                     <TD ALIGN="CENTER" COLSPAN="2" BGCOLOR="#333333"><FONT COLOR="WHITE"><B>{titulo_doc}</B></FONT></TD>
+                     <TD ALIGN="CENTER" BGCOLOR="#333333" HEIGHT="30"><FONT COLOR="WHITE" POINT-SIZE="14"><B>{titulo_doc}</B></FONT></TD>
                    </TR>
                  </TABLE>>;
                  labelloc="t";
