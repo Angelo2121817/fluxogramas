@@ -7,19 +7,19 @@ import graphviz as graphviz_lib
 # ==========================================
 # 🔐 ÁREA DE SEGURANÇA
 # ==========================================
-API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q"  # <--- COLE SUA CHAVE AQUI DENTRO DAS ASPAS
+API_KEY_FIXA = "AIzaSyB-LCZF_PHau6DHgRUKaZfbcsb82vcsZ4Q"  # <--- COLE SUA CHAVE AQUI
 # ==========================================
 
 # --- CONFIGURAÇÃO VISUAL ---
 st.set_page_config(page_title="Gerador A4 Pro", layout="wide")
 
 st.markdown("""
-    <style>
-    /* Fundo geral da aplicação - Cinza Claro Suave */
+<style>
+    /* Fundo Claro (Cinza Suave) */
     .main { background-color: #f4f4f4; }
     .stApp { background-color: #f4f4f4; }
     
-    /* Folha A4 na tela - Branca com sombra suave */
+    /* Folha A4 na tela - Branca com sombra */
     .a4-preview {
         background-color: white;
         width: 210mm;
@@ -32,28 +32,12 @@ st.markdown("""
         align-items: center;
     }
     
-    /* Ajuste de títulos para garantir contraste */
+    /* Ajuste de cores dos textos para fundo claro */
     h1, h2, h3 { color: #333 !important; }
-    </style>
-    """, unsafe_allow_html=True)
-    .main { background-color: #555; }
-    .stApp { background-color: #555; }
-    .a4-preview {
-        background-color: white;
-        width: 210mm;
-        min-height: 297mm;
-        padding: 0;
-        margin: 0 auto;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    h1, h2, h3 { color: white !important; }
-    .stTextInput > label, .stTextArea > label { color: white !important; }
-    .stMarkdown p { color: #eee !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    .stTextInput > label, .stTextArea > label { color: #333 !important; }
+    .stMarkdown p { color: #444 !important; }
+</style>
+""", unsafe_allow_html=True)
 
 with st.sidebar:
     st.header("📝 Dados do Documento")
@@ -145,7 +129,7 @@ with col_preview:
                         
                         if inicio != -1:
                             codigo_limpo = texto[inicio:]
-                            # Remove crases finais usando regex para evitar aspas no código
+                            # Remove crases finais usando regex
                             codigo_limpo = re.sub(r'`+$', '', codigo_limpo.strip())
                             
                             # 1. Visualização na Tela
@@ -178,4 +162,4 @@ with col_preview:
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-st.caption("Sistema de Engenharia de Processos v7.0")
+st.caption("Sistema de Engenharia de Processos v7.1")
