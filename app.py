@@ -2,17 +2,23 @@ import streamlit as st
 import requests
 import json
 import re
+import graphviz as graphviz_lib  # Necessário: pip install graphviz
 
 # --- CONFIGURAÇÃO VISUAL ---
-st.set_page_config(page_title="Fluxograma 2.5", layout="wide")
-st.title("Fluxograma Industrial (Motor Gemini 2.5)")
+st.set_page_config(page_title="Fluxograma Pro A4", layout="wide")
+st.title("Fluxograma Industrial (A4 Ready)")
 
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.header("Configuração")
-    # Cole a mesma chave que você usou para listar os modelos
     api_key = st.text_input("Cole sua API Key:", type="password")
-    st.success("Sistema calibrado para: gemini-2.5-flash")
+    
+    st.markdown("---")
+    st.markdown("### Ajustes de Impressão")
+    orientacao = st.radio("Orientação do Papel:", ["Retrato (Vertical)", "Paisagem (Horizontal)"])
+    
+    if api_key:
+        st.success("Sistema Armado.")
 
 # --- ÁREA DE OPERAÇÃO ---
 col1, col2 = st.columns([1, 2])
@@ -20,34 +26,50 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Descreva o Processo")
     texto_padrao = """Recebimento de matéria-prima.
-Verificação de qualidade.
-Se aprovado, vai para o estoque.
-Se reprovado, devolve ao fornecedor.
-Do estoque, segue para produção."""
+Verificação de qualidade (CQ).
+Se aprovado no CQ, vai para o Almoxarifado.
+Se reprovado, emite nota de devolução e devolve ao fornecedor.
+Do Almoxarifado, segue para pesagem.
+Da pesagem vai para o reator de mistura."""
+    
     descricao = st.text_area("Etapas:", value=texto_padrao, height=300)
     gerar = st.button("Gerar Fluxograma", type="primary")
 
 # --- EXECUÇÃO TÁTICA ---
 if gerar:
     if not api_key:
-        st.error("Sem chave, sem jogo, General.")
+        st.error("Preciso da chave API para operar, Angelo.")
     else:
-        # AQUI ESTÁ A MÁGICA: Usando o modelo que sua lista confirmou que existe
         modelo_escolhido = "gemini-2.5-flash"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo_escolhido}:generateContent?key={api_key}"
         
-        # Cabeçalhos e Prompt
+        # Define orientação para o Graphviz
+        rankdir = "TB" if "Retrato" in orientacao else "LR"
+        # Dimensões A4 em polegadas (aprox)
+        # O '!' força o gráfico a ocupar esse espaço
+        size_attr = 'size="8.27,11.69!"' if "Retrato" in orientacao else 'size="11.69,8.27!"'
+
         headers = {'Content-Type': 'application/json'}
+        
+        # Prompt Refinado para Engenharia/Processos
         prompt = f"""
-        Você é um especialista em processos industriais. Crie um código Graphviz (DOT) para:
+        Aja como um Engenheiro de Processos Sênior. Crie um código Graphviz (DOT) para o seguinte processo:
         "{descricao}"
         
-        Regras Visuais:
-        1. Layout horizontal (rankdir=LR).
-        2. Nós de decisão (Se/Então) = losango (shape=diamond, style=filled, color=orange).
-        3. Ações/Processos = retângulo (shape=box, style=filled, color=lightblue).
-        4. Início/Fim = oval (shape=ellipse, style=filled, color=lightgrey).
-        5. Retorne APENAS o código DOT dentro de ```dot ... ```.
+        REGRAS RÍGIDAS DE LAYOUT (A4):
+        1. O código DEVE começar com: digraph G {{ graph [fontname="Helvetica", fontsize=12, splines=ortho, nodesep=0.6, ranksep=0.8, {size_attr}, ratio="fill", margin=0.5]; node [fontname="Helvetica", shape=box, style="filled,rounded", fillcolor="#E3F2FD", penwidth=1.5]; edge [fontname="Helvetica", fontsize=10]; rankdir={rankdir};
+        
+        REGRAS DE ESTILO:
+        2. Início/Fim: shape=ellipse, style="filled", fillcolor="#424242", fontcolor="white".
+        3. Processos Normais: shape=box, style="filled,rounded", fillcolor="#FFFFFF", color="#1565C0".
+        4. Decisões (Se/Então): shape=diamond, style="filled", fillcolor="#FFF9C4", color="#FBC02D".
+        5. Documentos/Notas: shape=note, fillcolor="#F5F5F5".
+        
+        IMPORTANTE:
+        - Use rótulos nas setas para as decisões (ex: "Sim", "Não").
+        - Retorne APENAS o código DOT dentro de
+```dot ...
+```.
         """
         
         data = {
@@ -56,9 +78,8 @@ if gerar:
             }]
         }
 
-        with st.spinner(f'Acionando {modelo_escolhido}...'):
+        with st.spinner('Processando lógica do fluxo...'):
             try:
-                # Disparo direto
                 response = requests.post(url, headers=headers, data=json.dumps(data))
                 
                 if response.status_code == 200:
@@ -66,27 +87,48 @@ if gerar:
                     try:
                         texto = resultado['candidates'][0]['content']['parts'][0]['text']
                         
-                        # Limpa o texto para pegar só o código do gráfico
-                        match = re.search(r'```(?:dot)?\s*(.*?)```', texto, re.DOTALL)
+                        match = re.search(r'
+```(?:dot)?\s*(.*?)
+```', texto, re.DOTALL)
                         if match:
                             codigo_dot = match.group(1)
+                            
                             with col2:
-                                st.subheader("Visualização")
+                                st.subheader("Visualização (Preview)")
+                                # Renderiza na tela (SVG interativo)
                                 st.graphviz_chart(codigo_dot)
-                                with st.expander("Ver Código Fonte"):
+                                
+                                # --- LÓGICA DE EXPORTAÇÃO PDF ---
+                                try:
+                                    # Cria o objeto Graphviz para renderizar o arquivo
+                                    src = graphviz_lib.Source(codigo_dot)
+                                    # Renderiza para PDF em memória (pipe)
+                                    pdf_data = src.pipe(format='pdf')
+                                    
+                                    st.success("Fluxograma gerado com sucesso!")
+                                    
+                                    # Botão de Download
+                                    st.download_button(
+                                        label="📄 Baixar PDF (Formato A4)",
+                                        data=pdf_data,
+                                        file_name="fluxograma_processo.pdf",
+                                        mime="application/pdf"
+                                    )
+                                except Exception as e_graph:
+                                    st.warning(f"Visualização gerada, mas erro ao criar PDF para download: {e_graph}")
+                                    st.info("Dica: Instale o Graphviz no sistema (apt-get install graphviz ou baixe o instalador no Windows).")
+                                    
+                                with st.expander("Ver Código DOT"):
                                     st.code(codigo_dot)
                         else:
-                            st.warning("O modelo respondeu, mas esqueceu da formatação de código.")
-                            st.write(texto)
-                    except:
-                        st.error("Erro ao interpretar a resposta.")
+                            st.warning("O modelo não retornou o código formatado corretamente.")
+                    except Exception as e:
+                        st.error(f"Erro ao processar dados: {e}")
                 else:
-                    # Se der erro, mostra o motivo exato
-                    erro = response.json()
-                    st.error(f"Erro {response.status_code}: {erro.get('error', {}).get('message')}")
+                    st.error(f"Erro na API: {response.status_code}")
                     
             except Exception as e:
                 st.error(f"Erro de conexão: {e}")
 
 st.markdown("---")
-st.caption("Ferramenta Tática v4.0 - Direct Link")
+st.caption("Ferramenta de Processos - A4 Edition")
